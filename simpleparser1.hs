@@ -2,6 +2,7 @@ module Main where
 import System.Environment
 import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
+import Numeric
 
 main :: IO ()
 main = do args <- getArgs
@@ -16,7 +17,7 @@ data LispVal = Atom String
              | Bool Bool
 
 symbol :: Parser Char
-symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
+symbol = oneOf "!$%&|*+-/:<=?>@^_~"
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -39,6 +40,7 @@ parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
         <|> parseNumber
+        <|> parseBool
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -60,10 +62,44 @@ parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = [first] ++ rest
-               return $ case atom of
-                            "#t" -> Bool True
-                            "#f" -> Bool False
-                            otherwise -> Atom atom
+               return $ Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = many1 digit >>= (return . Number . read)
+parseNumber = parseHex <|> parseDecimal <|> parseOct <|> parseBinary
+
+parseHex :: Parser LispVal
+parseHex = string "#x" >> many1 hexDigit >>= (return . Number . convert readHex)
+
+parseDecimal :: Parser LispVal
+parseDecimal = try $ parseConventionalDecimal <|> parseTaggedDecimal
+
+parseConventionalDecimal :: Parser LispVal
+parseConventionalDecimal = many1 digit >>= (return . Number . read)
+
+parseTaggedDecimal :: Parser LispVal
+parseTaggedDecimal = string "#d" >> parseConventionalDecimal
+
+parseOct :: Parser LispVal
+parseOct = string "#o" >> many1 octDigit >>= (return . Number . convert readOct)
+
+parseBinary :: Parser LispVal
+parseBinary = string "#b" >> many1 (oneOf ['0', '1']) >>= return . Number . convertBinary
+
+convert :: (Eq a, Num a, Read a) => ReadS a -> String -> a
+convert base num = fst $ base num !! 0
+
+convertBinary :: String -> Integer
+convertBinary = convertBinaryAuxiliary 0
+
+convertBinaryAuxiliary :: Integer -> String -> Integer
+convertBinaryAuxiliary digInt "" = digInt
+
+convertBinaryAuxiliary digInt (x:xs) = let old = 2*digInt + (read [x])::Integer in
+                                       convertBinaryAuxiliary old xs
+
+parseBool :: Parser LispVal
+parseBool = char '#' >>
+            oneOf "tf" >>=
+            \boolean -> return $ case boolean of
+            't' -> Bool True
+            'f' -> Bool False
