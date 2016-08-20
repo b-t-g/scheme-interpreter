@@ -5,9 +5,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric
 
 main :: IO ()
-main = do args <- getArgs
-          putStrLn (args !! 0)
-          putStrLn (readExpr (args !! 0))
+main = getArgs >>= \args -> putStrLn (readExpr (args !! 0))
 
 data LispVal = Atom String
              | List [LispVal]
@@ -58,10 +56,10 @@ escapeSequence = char '\\' >>
                         'r' -> return "\r"
 
 parseAtom :: Parser LispVal
-parseAtom = do first <- letter <|> symbol
-               rest <- many (letter <|> digit <|> symbol)
-               let atom = [first] ++ rest
-               return $ Atom atom
+parseAtom = (letter <|> symbol) >>=
+            \first -> (many (letter <|> digit <|> symbol)) >>=
+            \rest -> let atom = [first] ++ rest in
+            return $ Atom atom
 
 parseNumber :: Parser LispVal
 parseNumber = parseHex <|> parseDecimal <|> parseOct <|> parseBinary
