@@ -43,20 +43,19 @@ parseExpr = parseAtom
         <|> parseBool
 
 parseString :: Parser LispVal
-parseString = do char '"'
-                 x <- many $ many1 (noneOf "\"\\") <|> escapeSequence
-                 char '"'
-                 return $ String $ concat x
+parseString = char '"' >>
+              (many $ many1 (noneOf "\"\\") <|> escapeSequence) >>=
+              \x -> (char '"') >> (return $ String $ concat x)
 
 escapeSequence :: Parser String
 escapeSequence = char '\\' >>
                     oneOf "\\\"ntr" >>= \sequence ->
                     case sequence of
-                        '\\' -> do return [sequence]
-                        '"' -> do return [sequence]
-                        'n' -> do return "\n"
-                        't' -> do return "\t"
-                        'r' -> do return "\r"
+                        '\\' -> return [sequence]
+                        '"' -> return [sequence]
+                        'n' -> return "\n"
+                        't' -> return "\t"
+                        'r' -> return "\r"
 
 parseAtom :: Parser LispVal
 parseAtom = do first <- letter <|> symbol
