@@ -14,25 +14,10 @@ data LispVal = Atom String
              | String String
              | Bool Bool
 
-symbol :: Parser Char
-symbol = oneOf "!$%&|*+-/:<=?>@^_~"
-
-spaces :: Parser ()
-spaces = skipMany1 space
-
-escapeSequences :: [Char]
-escapeSequences = ['\\', '"', '\n', '\r', '\t']
-
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
     Left err -> "No match: " ++ show err
     Right val -> "Found value"
-
-readString :: String -> String
-readString input = case parse parseString "lisp" input of
-    Left err -> show err
-    Right val -> "found it"
- 
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
@@ -44,16 +29,6 @@ parseString :: Parser LispVal
 parseString = char '"' >>
               (many $ many1 (noneOf "\"\\") <|> escapeSequence) >>=
               \x -> (char '"') >> (return $ String $ concat x)
-
-escapeSequence :: Parser String
-escapeSequence = char '\\' >>
-                    oneOf "\\\"ntr" >>= \sequence ->
-                    case sequence of
-                        '\\' -> return [sequence]
-                        '"' -> return [sequence]
-                        'n' -> return "\n"
-                        't' -> return "\t"
-                        'r' -> return "\r"
 
 parseAtom :: Parser LispVal
 parseAtom = (letter <|> symbol) >>=
@@ -70,6 +45,25 @@ parseBool = char '#' >>
             \boolean -> return $ case boolean of
             't' -> Bool True
             'f' -> Bool False
+
+spaces :: Parser ()
+spaces = skipMany1 space
+
+symbol :: Parser Char
+symbol = oneOf "!$%&|*+-/:<=?>@^_~"
+
+escapeSequence :: Parser String
+escapeSequence = char '\\' >>
+                    oneOf escapeSequences >>= \sequence ->
+                    case sequence of
+                        '\\' -> return [sequence]
+                        '"' -> return [sequence]
+                        'n' -> return "\n"
+                        't' -> return "\t"
+                        'r' -> return "\r"
+
+escapeSequences :: [Char]
+escapeSequences = ['\\', '"', '\n', '\r', '\t']
 
 parseHex :: Parser LispVal
 parseHex = string "#x" >> many1 hexDigit >>= (return . Number . convert readHex)
