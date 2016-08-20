@@ -64,6 +64,13 @@ parseAtom = (letter <|> symbol) >>=
 parseNumber :: Parser LispVal
 parseNumber = parseHex <|> parseDecimal <|> parseOct <|> parseBinary
 
+parseBool :: Parser LispVal
+parseBool = char '#' >>
+            oneOf "tf" >>=
+            \boolean -> return $ case boolean of
+            't' -> Bool True
+            'f' -> Bool False
+
 parseHex :: Parser LispVal
 parseHex = string "#x" >> many1 hexDigit >>= (return . Number . convert readHex)
 
@@ -93,10 +100,3 @@ convertBinaryAuxiliary digInt "" = digInt
 
 convertBinaryAuxiliary digInt (x:xs) = let old = 2*digInt + (read [x])::Integer in
                                        convertBinaryAuxiliary old xs
-
-parseBool :: Parser LispVal
-parseBool = char '#' >>
-            oneOf "tf" >>=
-            \boolean -> return $ case boolean of
-            't' -> Bool True
-            'f' -> Bool False
