@@ -13,6 +13,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             | Character Char
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
@@ -22,19 +23,24 @@ readExpr input = case parse parseExpr "lisp" input of
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
+        <|> parseChar
         <|> parseNumber
         <|> parseBool
-
-parseString :: Parser LispVal
-parseString = char '"' >>
-              (many $ many1 (noneOf "\"\\") <|> escapeSequence) >>=
-              \x -> (char '"') >> (return $ String $ concat x)
 
 parseAtom :: Parser LispVal
 parseAtom = (letter <|> symbol) >>=
             \first -> (many (letter <|> digit <|> symbol)) >>=
             \rest -> let atom = [first] ++ rest in
             return $ Atom atom
+
+parseString :: Parser LispVal
+parseString = char '"' >>
+              (many $ many1 (noneOf "\"\\") <|> escapeSequence) >>=
+              \x -> (char '"') >> (return $ String $ concat x)
+
+parseChar :: Parser LispVal
+parseChar = string "#\\" >> (special <|> anyChar) >>=
+            \x -> return $ Character x
 
 parseNumber :: Parser LispVal
 parseNumber = parseHex <|> parseDecimal <|> parseOct <|> parseBinary
@@ -61,9 +67,16 @@ escapeSequence = char '\\' >>
                         'n' -> return "\n"
                         't' -> return "\t"
                         'r' -> return "\r"
+                        'b' -> return "\b"
 
 escapeSequences :: [Char]
-escapeSequences = ['\\', '"', '\n', '\r', '\t']
+escapeSequences = ['\\', '"', '\n', '\r', '\t', '\b']
+
+special = (string "space" <|> string "tab" <|> string "linefeed" <|> string "return") >>= \x -> case x of
+          "space" -> return ' '
+          "tab" ->  return '\t'
+          "linefeed" -> return '\n'
+          "return" -> return '\r'
 
 parseHex :: Parser LispVal
 parseHex = string "#x" >> many1 hexDigit >>= (return . Number . convert readHex)
