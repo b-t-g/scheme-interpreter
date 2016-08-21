@@ -23,9 +23,9 @@ readExpr input = case parse parseExpr "lisp" input of
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
         <|> parseString
-        <|> parseChar
-        <|> parseNumber
-        <|> parseBool
+        <|> try parseChar
+        <|> try parseNumber
+        <|> try parseBool
 
 parseAtom :: Parser LispVal
 parseAtom = (letter <|> symbol) >>=
