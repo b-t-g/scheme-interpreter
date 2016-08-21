@@ -11,6 +11,7 @@ data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
+             | Float Double
              | String String
              | Bool Bool
              | Character Char
@@ -25,6 +26,7 @@ parseExpr = parseAtom
         <|> parseString
         <|> try parseChar
         <|> try parseNumber
+        <|> try parseFloat
         <|> try parseBool
 
 parseAtom :: Parser LispVal
@@ -95,6 +97,13 @@ parseOct = string "#o" >> many1 octDigit >>= (return . Number . convert readOct)
 
 parseBinary :: Parser LispVal
 parseBinary = string "#b" >> many1 (oneOf ['0', '1']) >>= return . Number . convertBinary
+
+parseFloat :: Parser LispVal
+parseFloat = many1 digit >>=
+             \whole -> char '.' >> many1 digit >>=
+             \fractional -> let floatingPointNumber = whole ++ "." ++ fractional in 
+                                return $ Float (convert readFloat floatingPointNumber)
+             
 
 convert :: (Eq a, Num a, Read a) => ReadS a -> String -> a
 convert base num = fst $ base num !! 0
