@@ -30,6 +30,26 @@ parseExpr = parseAtom
         <|> try parseNumber
         <|> try parseFloat
         <|> try parseBool
+        <|> parseQuoted
+        <|> parseLists
+            
+parseLists :: Parser LispVal
+parseLists = char '(' >>
+             ((try parseList) <|> parseDottedList) >>=
+             \x -> char ')' >> return x
+
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = endBy parseExpr spaces >>=
+                  \head -> char '.' >> spaces >> parseExpr >>=
+                  \tail -> return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = char '\'' >>
+              parseExpr >>=
+              \x -> return $ List [Atom "quote", x]
 
 parseAtom :: Parser LispVal
 parseAtom = (letter <|> symbol) >>=
