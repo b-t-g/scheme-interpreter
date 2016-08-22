@@ -10,8 +10,10 @@ main = getArgs >>= \args -> putStrLn (readExpr (args !! 0))
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
+             | Complex Double Double 
              | Number Integer
              | Float Double
+             | Rational Integer Integer
              | String String
              | Bool Bool
              | Character Char
@@ -45,7 +47,7 @@ parseChar = string "#\\" >> (special <|> anyChar) >>=
             \x -> return $ Character x
 
 parseNumber :: Parser LispVal
-parseNumber = parseHex <|> parseDecimal <|> parseOct <|> parseBinary
+parseNumber = parseFloat <|> parseRational <|> parseHex <|> parseDecimal <|> parseOct <|> parseBinary <|> parseComplex
 
 parseBool :: Parser LispVal
 parseBool = char '#' >>
@@ -104,6 +106,17 @@ parseFloat = many1 digit >>=
              \fractional -> let floatingPointNumber = whole ++ "." ++ fractional in 
                                 return $ Float (convert readFloat floatingPointNumber)
              
+parseRational :: Parser LispVal
+parseRational = many1 digit >>=
+                \numerator -> char '/' >> many1 digit >>=
+                \denominator -> return $ Rational (read numerator) (read denominator)
+
+parseComplex :: Parser LispVal
+parseComplex = parseFloat >>=
+               \realPart -> oneOf "+-" >>
+               parseFloat >>=
+               \imaginaryPart -> char 'i' >>
+               return (Complex (extractFloat realPart) (extractFloat imaginaryPart))
 
 convert :: (Eq a, Num a, Read a) => ReadS a -> String -> a
 convert base num = fst $ base num !! 0
@@ -116,3 +129,6 @@ convertBinaryAuxiliary digInt "" = digInt
 
 convertBinaryAuxiliary digInt (x:xs) = let old = 2*digInt + (read [x])::Integer in
                                        convertBinaryAuxiliary old xs
+
+extractFloat :: LispVal -> Double 
+extractFloat (Float value) = value
