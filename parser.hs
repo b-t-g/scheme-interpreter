@@ -31,20 +31,30 @@ parseExpr = parseAtom
         <|> try parseFloat
         <|> try parseBool
         <|> parseQuoted
-        <|> parseLists
+        <|> parseList
             
-parseLists :: Parser LispVal
-parseLists = char '(' >>
-             ((try parseList) <|> parseDottedList) >>=
+parseList :: Parser LispVal
+parseList = char '(' >>
+             ((try parseNormalList) <|> parseDottedList) >>=
              \x -> char ')' >> return x
 
-parseList :: Parser LispVal
-parseList = liftM List $ sepBy parseExpr spaces
+parseNormalList :: Parser LispVal
+parseNormalList = liftM List $ sepBy parseExpr spaces
 
 parseDottedList :: Parser LispVal
 parseDottedList = endBy parseExpr spaces >>=
                   \head -> char '.' >> spaces >> parseExpr >>=
                   \tail -> return $ DottedList head tail
+
+parseBackQuoteList :: Parser LispVal
+parseBackQuoteList = char '`' >>
+                     parseExpr >>=
+                     \x -> return (List [Atom "backquote", x])
+
+parseUnquote :: Parser LispVal
+parseUnquote = char ',' >>
+               parseExpr >>=
+               \x -> return (List [Atom "unquote", x])
 
 parseQuoted :: Parser LispVal
 parseQuoted = char '\'' >>
