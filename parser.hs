@@ -32,6 +32,8 @@ parseExpr = parseAtom
         <|> try parseBool
         <|> parseQuoted
         <|> parseList
+        <|> parseBackQuoteList
+        <|> parseUnquoteList
             
 parseList :: Parser LispVal
 parseList = char '(' >>
@@ -51,8 +53,8 @@ parseBackQuoteList = char '`' >>
                      parseExpr >>=
                      \x -> return (List [Atom "backquote", x])
 
-parseUnquote :: Parser LispVal
-parseUnquote = char ',' >>
+parseUnquoteList :: Parser LispVal
+parseUnquoteList = char ',' >>
                parseExpr >>=
                \x -> return (List [Atom "unquote", x])
 
